@@ -48,18 +48,21 @@ public class PictureActivity extends ToolbarActivity {
     public static final String EXTRA_IMAGE_TITLE = "image_title";
     public static final String TRANSIT_PIC = "picture";
 
-    @Bind(R.id.picture) ImageView mImageView;
+    @Bind(R.id.picture)
+    ImageView mImageView;
 
     PhotoViewAttacher mPhotoViewAttacher;
     String mImageUrl, mImageTitle;
 
 
-    @Override protected int provideContentViewId() {
+    @Override
+    protected int provideContentViewId() {
         return R.layout.activity_picture;
     }
 
 
-    @Override public boolean canBack() {
+    @Override
+    public boolean canBack() {
         return true;
     }
 
@@ -78,7 +81,8 @@ public class PictureActivity extends ToolbarActivity {
     }
 
 
-    @Override protected void onCreate(Bundle savedInstanceState) {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ButterKnife.bind(this);
         parseIntent();
@@ -89,7 +93,10 @@ public class PictureActivity extends ToolbarActivity {
         setupPhotoAttacher();
     }
 
-
+    /**
+     * 特别的事件监听方法.
+     * 为什么要这样设置呢???
+     */
     private void setupPhotoAttacher() {
         mPhotoViewAttacher = new PhotoViewAttacher(mImageView);
         mPhotoViewAttacher.setOnViewTapListener((view, v, v1) -> hideOrShowToolbar());
@@ -114,26 +121,28 @@ public class PictureActivity extends ToolbarActivity {
     private void saveImageToGallery() {
         // @formatter:off
         Subscription s = RxMeizhi.saveImageAndGetPathObservable(this, mImageUrl, mImageTitle)
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(uri -> {
-                File appDir = new File(Environment.getExternalStorageDirectory(), "Meizhi");
-                String msg = String.format(getString(R.string.picture_has_save_to),
-                        appDir.getAbsolutePath());
-                Toasts.showShort(msg);
-            }, error -> Toasts.showLong(error.getMessage() + "\n再试试..."));
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(uri -> {
+                    File appDir = new File(Environment.getExternalStorageDirectory(), "Meizhi");
+                    String msg = String.format(getString(R.string.picture_has_save_to),
+                            appDir.getAbsolutePath());
+                    Toasts.showShort(msg);
+                }, error -> Toasts.showLong(error.getMessage() + "\n再试试..."));
         // @formatter:on
         addSubscription(s);
     }
 
 
-    @Override public boolean onCreateOptionsMenu(Menu menu) {
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_picture, menu);
         // TODO: 把图片的一些信息，比如 who，加载到 Overflow 当中
         return true;
     }
 
 
-    @Override public boolean onOptionsItemSelected(MenuItem item) {
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         switch (id) {
             case R.id.action_share:
@@ -152,19 +161,22 @@ public class PictureActivity extends ToolbarActivity {
     }
 
 
-    @Override public void onResume() {
+    @Override
+    public void onResume() {
         super.onResume();
         MobclickAgent.onResume(this);
     }
 
 
-    @Override public void onPause() {
+    @Override
+    public void onPause() {
         super.onPause();
         MobclickAgent.onPause(this);
     }
 
 
-    @Override protected void onDestroy() {
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
         mPhotoViewAttacher.cleanup();
         ButterKnife.unbind(this);

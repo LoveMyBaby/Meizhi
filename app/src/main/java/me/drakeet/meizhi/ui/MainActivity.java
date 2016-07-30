@@ -64,7 +64,8 @@ public class MainActivity extends SwipeRefreshBaseActivity {
 
     private static final int PRELOAD_SIZE = 6;
 
-    @Bind(R.id.rv_meizhi) RecyclerView mRecyclerView;
+    @Bind(R.id.rv_meizhi)
+    RecyclerView mRecyclerView;
 
     private MeizhiListAdapter mMeizhiListAdapter;
     private List<Meizhi> mMeizhiList;
@@ -73,27 +74,44 @@ public class MainActivity extends SwipeRefreshBaseActivity {
     private boolean mMeizhiBeTouched;
 
 
-    @Override protected int provideContentViewId() {
+    @Override
+    protected int provideContentViewId() {
         return R.layout.activity_main;
     }
 
 
-    @Override protected void onCreate(Bundle savedInstanceState) {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ButterKnife.bind(this);
         mMeizhiList = new ArrayList<>();
+        /**************************************************************************************/
         QueryBuilder query = new QueryBuilder(Meizhi.class);
         query.appendOrderDescBy("publishedAt");
         query.limit(0, 10);
         mMeizhiList.addAll(App.sDb.query(query));
+        /**************************************************************************************/
 
         setupRecyclerView();
+
+        /**************************************************************************************/
         setupUmeng();
         AlarmManagers.register(this);
+        /**************************************************************************************/
+
     }
 
-
-    @Override protected void onPostCreate(Bundle savedInstanceState) {
+    /**
+     *  Called when activity start-up is complete after onStart
+     * and onRestoreInstanceState have been called.  Applications will
+     * generally not implement this method; it is intended for system
+     * classes to do final initialization after application code has run.
+     * 含义:
+     * 这个activity彻底启动之后会系统调用这个方法做最后的一些初始化操作.|
+     * @param savedInstanceState
+     */
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         new Handler().postDelayed(() -> setRefresh(true), 358);
         loadData(true);
@@ -113,13 +131,14 @@ public class MainActivity extends SwipeRefreshBaseActivity {
         mRecyclerView.setLayoutManager(layoutManager);
         mMeizhiListAdapter = new MeizhiListAdapter(this, mMeizhiList);
         mRecyclerView.setAdapter(mMeizhiListAdapter);
+        /**************************************************************************************/
         new Once(this).show("tip_guide_6", () -> {
             Snackbar.make(mRecyclerView, getString(R.string.tip_guide), Snackbar.LENGTH_INDEFINITE)
                     .setAction(R.string.i_know, v -> {
                     })
                     .show();
         });
-
+        /**************************************************************************************/
         mRecyclerView.addOnScrollListener(getOnBottomListener(layoutManager));
         mMeizhiListAdapter.setOnMeizhiTouchListener(getOnMeizhiTouchListener());
     }
@@ -134,23 +153,48 @@ public class MainActivity extends SwipeRefreshBaseActivity {
         mLastVideoIndex = 0;
         // @formatter:off
         Subscription s = Observable
-               .zip(sGankIO.getMeizhiData(mPage),
-                     sGankIO.get休息视频Data(mPage),
-                     this::createMeizhiDataWith休息视频Desc)
-               .map(meizhiData -> meizhiData.results)
-               .flatMap(Observable::from)
-               .toSortedList((meizhi1, meizhi2) ->
-                     meizhi2.publishedAt.compareTo(meizhi1.publishedAt))
-               .doOnNext(this::saveMeizhis)
-               .observeOn(AndroidSchedulers.mainThread())
-               .finallyDo(() -> setRefresh(false))
-               .subscribe(meizhis -> {
-                   if (clean) mMeizhiList.clear();
-                   mMeizhiList.addAll(meizhis);
-                   mMeizhiListAdapter.notifyDataSetChanged();
-                   setRefresh(false);
-               }, throwable -> loadError(throwable));
+                /**
+                 * zip:同时发两个请求,等两个请求完毕后汇合成另外一个数据集
+                 */
+                .zip(sGankIO.getMeizhiData(mPage),
+                        sGankIO.get休息视频Data(mPage),
+                        this::createMeizhiDataWith休息视频Desc)
+                /**
+                 * 转变数据集合结构
+                 */
+                .map(meizhiData -> meizhiData.results)
+                /**
+                 * 依次发射Observable
+                 * 方便下面的排序
+                 */
+                .flatMap(Observable::from)//ClassName::staticMethod lamda表达式的方法引用
+                /**
+                 * 根据发布时间降序排列
+                 */
+                .toSortedList((meizhi1, meizhi2) ->
+                        meizhi2.publishedAt.compareTo(meizhi1.publishedAt))
+                /**
+                 *在被订阅前的操作
+                 * 保存数据到本地
+                 */
+                .doOnNext(this::saveMeizhis)//objectName::instanceMethod lamda表达式的方法引用
+                .observeOn(AndroidSchedulers.mainThread())
+                /**
+                 * to be invoked when the source Observable finishes
+                 */
+                .finallyDo(() -> setRefresh(false))
+                .subscribe(meizhis -> {
+                    if (clean) mMeizhiList.clear();
+                    mMeizhiList.addAll(meizhis);
+                    mMeizhiListAdapter.notifyDataSetChanged();
+                    setRefresh(false);
+                }, throwable -> loadError(throwable));
         // @formatter:on
+        /**
+         * 添加到CompositeSubscription中,CompositeSubscription中含有Set<Subscription> subscriptions
+         * CompositeSubscription维护了Subscription集合.
+         * 方便Subcription的取消订阅操作.与activity或者fragment生命周期绑定.
+         */
         addSubscription(s);
     }
 
@@ -181,7 +225,7 @@ public class MainActivity extends SwipeRefreshBaseActivity {
 
     private int mLastVideoIndex = 0;
 
-
+    /**************************************************************************************/
     private String getFirstVideoDesc(Date publishedAt, List<Gank> results) {
         String videoDesc = "";
         for (int i = mLastVideoIndex; i < results.size(); i++) {
@@ -195,7 +239,7 @@ public class MainActivity extends SwipeRefreshBaseActivity {
         }
         return videoDesc;
     }
-
+    /**************************************************************************************/
 
     private void loadData() {
         loadData(/* clean */false);
@@ -206,16 +250,21 @@ public class MainActivity extends SwipeRefreshBaseActivity {
         return (v, meizhiView, card, meizhi) -> {
             if (meizhi == null) return;
             if (v == meizhiView && !mMeizhiBeTouched) {
-                mMeizhiBeTouched = true;
+                //点击妹子小图片时的事件处理
                 Picasso.with(this).load(meizhi.url).fetch(new Callback() {
 
-                    @Override public void onSuccess() {
+                    @Override
+                    public void onSuccess() {
                         mMeizhiBeTouched = false;
+                        //实现点击放大图片的关键方法
                         startPictureActivity(meizhi, meizhiView);
                     }
 
 
-                    @Override public void onError() {mMeizhiBeTouched = false;}
+                    @Override
+                    public void onError() {
+                        mMeizhiBeTouched = false;
+                    }
                 });
             } else if (v == card) {
                 startGankActivity(meizhi.publishedAt);
@@ -233,6 +282,7 @@ public class MainActivity extends SwipeRefreshBaseActivity {
 
     private void startPictureActivity(Meizhi meizhi, View transitView) {
         Intent intent = PictureActivity.newIntent(MainActivity.this, meizhi.url, meizhi.desc);
+        //android V4包的类,用于两个activity转场时的缩放效果实现
         ActivityOptionsCompat optionsCompat = ActivityOptionsCompat.makeSceneTransitionAnimation(
                 MainActivity.this, transitView, PictureActivity.TRANSIT_PIC);
         try {
@@ -244,17 +294,22 @@ public class MainActivity extends SwipeRefreshBaseActivity {
     }
 
 
-    @Override public void onToolbarClick() {mRecyclerView.smoothScrollToPosition(0);}
+    @Override
+    public void onToolbarClick() {
+        mRecyclerView.smoothScrollToPosition(0);
+    }
 
 
-    @OnClick(R.id.main_fab) public void onFab(View v) {
+    @OnClick(R.id.main_fab)
+    public void onFab(View v) {
         if (mMeizhiList != null && mMeizhiList.size() > 0) {
             startGankActivity(mMeizhiList.get(0).publishedAt);
         }
     }
 
 
-    @Override public void requestDataRefresh() {
+    @Override
+    public void requestDataRefresh() {
         super.requestDataRefresh();
         mPage = 1;
         loadData(true);
@@ -269,7 +324,8 @@ public class MainActivity extends SwipeRefreshBaseActivity {
     }
 
 
-    @Override public boolean onCreateOptionsMenu(Menu menu) {
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         MenuItem item = menu.findItem(R.id.action_notifiable);
         initNotifiableItemState(item);
@@ -283,7 +339,8 @@ public class MainActivity extends SwipeRefreshBaseActivity {
     }
 
 
-    @Override public boolean onOptionsItemSelected(MenuItem item) {
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         switch (id) {
             case R.id.action_trending:
@@ -303,7 +360,8 @@ public class MainActivity extends SwipeRefreshBaseActivity {
 
     RecyclerView.OnScrollListener getOnBottomListener(StaggeredGridLayoutManager layoutManager) {
         return new RecyclerView.OnScrollListener() {
-            @Override public void onScrolled(RecyclerView rv, int dx, int dy) {
+            @Override
+            public void onScrolled(RecyclerView rv, int dx, int dy) {
                 boolean isBottom =
                         layoutManager.findLastCompletelyVisibleItemPositions(new int[2])[1] >=
                                 mMeizhiListAdapter.getItemCount() - PRELOAD_SIZE;
@@ -321,19 +379,22 @@ public class MainActivity extends SwipeRefreshBaseActivity {
     }
 
 
-    @Override public void onResume() {
+    @Override
+    public void onResume() {
         super.onResume();
         MobclickAgent.onResume(this);
     }
 
 
-    @Override public void onPause() {
+    @Override
+    public void onPause() {
         super.onPause();
         MobclickAgent.onPause(this);
     }
 
 
-    @Override protected void onDestroy() {
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
         ButterKnife.unbind(this);
     }
